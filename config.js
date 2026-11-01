@@ -3,7 +3,7 @@
    SITE_URL : رابط الموقع بعد رفعه — منه تُبنى روابط الضيوف والباركود */
 window.INVITE_CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxlI8UfG1OmUZLWeKj7Mf-bTP0_SVHpMRVFfKbD4pyJxpqlOw0Qlt6v3CrSbDxNLj2D/exec",
-  SITE_URL: "https://omayacoffee99-pixel.github.io/mohammed-sedeen/",
+  SITE_URL: "https://mohammed-sedeen.github.io/",
   PASS_PREFIX: "INV:",
   DEMO_GUEST: { id: "", name: "", allowed: 3 },
   DEFAULTS: {

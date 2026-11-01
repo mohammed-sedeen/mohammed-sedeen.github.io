@@ -284,7 +284,7 @@ textarea.inp{min-height:100px;resize:vertical}
   <div class="form" id="form"></div>
 </div>
 
-<script src="config.js?v=3"></script>
+<script src="config.js?v=4"></script>
 <script src="vendor/qrcode-generator.js"></script>
 <script src="vendor/html2canvas.min.js" defer></script>
 <script>
@@ -365,7 +365,7 @@ function render(){
   const cw=el('div',{class:'group'}); const pills=el('div',{class:'pills'});
   for(let i=1;i<=allowed;i++){ const b=el('button',{type:'button','aria-pressed':String(i===count),text:toAr(i)}); b.onclick=()=>{ count=i; [...pills.children].forEach((x,j)=>x.setAttribute('aria-pressed',String(j+1===i))); }; pills.append(b); }
   cw.append(el('span',{class:'lbl',text:'عدد الحضور'}), pills);
-  const msg=el('textarea',{class:'inp',id:'gMsg',maxlength:'400'});
+  const msg=el('textarea',{class:'inp',id:'gMsg',maxlength:'400'}); msg.value=guest.message||'';
   const send=el('button',{type:'button',class:'send',text:'إرسال'}); const note=el('p',{class:'note',role:'status'});
   const sync=()=>{ yes.setAttribute('aria-pressed',String(choice==='yes')); no.setAttribute('aria-pressed',String(choice==='no')); cw.hidden=!(choice==='yes'&&allowed>1); send.disabled=!choice||name.value.trim().length<2; };
   name.addEventListener('input',sync);
@@ -375,7 +375,7 @@ function render(){
       const nm=name.value.replace(/\s+/g,' ').trim();
       if(DEMO){ await new Promise(r=>setTimeout(r,600)); res={ok:true,guest:Object.assign({},guest,{id:guest.id||'DEMO24',name:nm,status:choice==='yes'?'سيحضر':'اعتذر',count:c})}; }
       else res=await apiPost({action:'rsvp',id:guest.id||'',name:nm,status:choice,count:c,message:msg.value.trim()});
-      if(!res||!res.ok) throw 0; guest=Object.assign(guest,res.guest||{}); if(!DEMO && guest.id) ls.set('rsvp_id',guest.id); renderDone();
+      if(!res||!res.ok) throw 0; guest=Object.assign(guest,res.guest||{},{message:msg.value.trim()}); if(!DEMO && guest.id) ls.set('rsvp_id',guest.id); renderDone();
     }catch(e){ note.className='note err'; note.textContent='تعذّر إرسال الرد. تحقق من الاتصال وحاول مرة أخرى.'; send.disabled=false; } };
   f.append(el('label',{class:'lbl',for:'gName',text:'الاسم الكريم *'}), name,
            el('div',{class:'group'}, el('span',{class:'lbl',text:'هل سنتشرف بحضوركم؟ *'}), yes, no), cw,

@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>مسح بطاقات الدخول</title>
+<meta name="theme-color" content="#E9DED1">
+<meta property="og:title" content="مسح بطاقات الدخول">
+<meta property="og:description" content="دعوة زفاف — نتشرّف بحضوركم">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Aref+Ruqaa:wght@400;700&family=Bodoni+Moda:opsz,wght@6..96,400;6..96,500&family=Cormorant+Garamond:wght@500;600&family=Italianno&family=Pinyon+Script&family=Tajawal:wght@300;400;500;700&display=swap">
+<style>
+:root{--bg:#1C140E;--panel:#2A1F16;--line:#4A3828;--text:#F3E8D7;--soft:#BBA68C;--gold:#C9A563;--ok:#5E9A68;--warn:#C99134;--bad:#C2574A;
+  --f-ui:'Tajawal','Segoe UI',sans-serif;--f-ruqaa:'Aref Ruqaa','Amiri',serif;--f-naskh:'Amiri','Times New Roman',serif;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--f-ui);direction:rtl;min-height:100vh}
+.wrap{max-width:520px;margin:0 auto;padding-block:calc(env(safe-area-inset-top,0px) + 22px) calc(env(safe-area-inset-bottom,0px) + 28px);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:16px}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+h1{font-family:var(--f-ruqaa);font-weight:400;font-size:26px;margin:0;color:var(--gold)}
+.stat{font-size:13px;color:var(--soft);text-align:left}
+.stat b{display:block;font-size:20px;color:var(--text);font-variant-numeric:tabular-nums}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+label{display:block;font-size:14px;color:var(--soft);margin-bottom:8px}
+input{width:100%;min-height:48px;border-radius:10px;border:1px solid var(--line);background:#16100B;color:var(--text);font:inherit;font-size:18px;padding:0 14px;letter-spacing:.1em;text-align:center}
+button{font:inherit;cursor:pointer}
+.btn{width:100%;min-height:48px;border-radius:10px;border:0;background:var(--gold);color:#22180F;font-weight:700;font-size:16px;margin-top:10px}
+.btn.alt{background:transparent;border:1px solid var(--line);color:var(--text)}
+#reader{width:100%;border-radius:12px;overflow:hidden;background:#000;min-height:260px}
+#reader video{border-radius:12px}
+.res{border-radius:14px;padding:20px;text-align:center;border:2px solid}
+.res.ok{border-color:var(--ok);background:rgba(94,154,104,.14)}
+.res.warn{border-color:var(--warn);background:rgba(201,145,52,.14)}
+.res.bad{border-color:var(--bad);background:rgba(194,87,74,.14)}
+.res .t{font-size:15px;font-weight:700;margin:0}
+.res .n{font-family:var(--f-naskh);font-weight:700;font-size:28px;margin:6px 0 2px}
+.res .c{font-size:18px;margin:0}
+.res .x{font-size:13px;color:var(--soft);margin:8px 0 0}
+.manual{display:flex;gap:8px}
+.manual input{flex:1;min-width:0}
+.manual button{min-width:92px;margin:0;width:auto;padding:0 16px}
+.err{color:#E7978C;font-size:14px;min-height:1.2em;margin:8px 0 0}
+.demo{font-size:12px;color:var(--gold);text-align:center}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header><h1>مسح بطاقات الدخول</h1><div class="stat">دخل حتى الآن<b id="stIn">—</b></div></header>
+  <p class="demo" id="demoNote" hidden>وضع تجريبي: جرّب الرمز DEMO24</p>
+  <div class="panel" id="gate">
+    <label for="pin">رمز المنظّمين</label>
+    <input id="pin" inputmode="numeric" autocomplete="off" placeholder="••••">
+    <button class="btn" id="pinBtn" type="button">بدء المسح</button>
+    <p class="err" id="pinErr" role="alert"></p>
+  </div>
+  <div id="scanner" hidden>
+    <div id="reader"></div>
+    <div class="res" id="res" hidden></div>
+    <button class="btn" id="nextBtn" type="button" hidden>مسح التالي</button>
+    <div class="panel" style="margin-top:12px">
+      <label for="code">إدخال الرمز يدوياً</label>
+      <div class="manual"><input id="code" autocomplete="off" placeholder="مثال: K7Q2MX9P"><button class="btn" id="codeBtn" type="button">تحقق</button></div>
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="vendor/html5-qrcode.min.js"></script>
+<script>
+(function(){
+const CFG = window.INVITE_CONFIG || {}; const DEMO = !CFG.API_URL; const $ = s=>document.querySelector(s);
+const AD='٠١٢٣٤٥٦٧٨٩'; const toAr=v=>String(v).replace(/[0-9]/g,d=>AD[d]);
+let pin = ''; try{ pin = sessionStorage.getItem('door_pin')||''; }catch(e){}
+let qr = null, busy = false;
+if(DEMO) $('#demoNote').hidden = false;
+
+async function post(body){
+  if(DEMO){
+    await new Promise(r=>setTimeout(r,300));
+    if(body.id !== 'DEMO24') return {ok:true, result:'invalid'};
+    const seen = sessionStorage.getItem('demo_in');
+    if(seen && !body.force) return {ok:true, result:'already', guest:{name:'عبدالله العتيبي', count:3, checkin_time:seen}, stats:{in:3}};
+    const t = new Date().toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'}); sessionStorage.setItem('demo_in', t);
+    return {ok:true, result:'ok', guest:{name:'عبدالله العتيبي', count:3}, stats:{in:3}};
+  }
+  const r = await fetch(CFG.API_URL, {method:'POST', redirect:'follow', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body)});
+  return r.json();
+}
+function seats(n){ n=+n||1; return n===1?'شخص واحد':n===2?'شخصان':toAr(n)+' أشخاص'; }
+function show(kind, t, name, count, extra, forceId){
+  const r = $('#res'); r.className = 'res ' + kind; r.textContent = '';
+  const p=(c,tx)=>{ const e=document.createElement('p'); e.className=c; e.textContent=tx; r.append(e); };
+  p('t',t); if(name) p('n',name); if(count) p('c',count); if(extra) p('x',extra);
+  if(forceId){ const b=document.createElement('button'); b.className='btn alt'; b.textContent='السماح بالدخول وتسجيله'; b.onclick=()=>check(forceId,true); r.append(b); }
+  r.hidden = false; $('#nextBtn').hidden = false;
+  if(navigator.vibrate) navigator.vibrate(kind==='ok'?80:[60,60,60]);
+}
+async function check(raw, force){
+  if(busy) return; busy = true;
+  const txt = String(raw||'').trim(); const mg = txt.match(/[?&]g=([A-Za-z0-9]+)/);
+  const id = (mg ? mg[1] : txt.replace(/^.*?:/,'')).toUpperCase();
+  try{
+    const res = await post({action:'checkin', id, pin, force:!!force});
+    if(res && res.stats){ const n=+res.stats.in||0; $('#stIn').textContent = n ? seats(n) : '٠'; }
+    if(!res || res.error==='bad_pin'){ lock('رمز المنظّمين غير صحيح'); return; }
+    const g = res.guest||{};
+    switch(res.result){
+      case 'ok': show('ok','أهلاً وسهلاً', g.name, seats(g.count), 'تم تسجيل الدخول'); break;
+      case 'already': show('warn','تم الدخول بهذه البطاقة مسبقاً', g.name, seats(g.count), g.checkin_time ? 'وقت الدخول: '+g.checkin_time : ''); break;
+      case 'not_confirmed': show('warn','الضيف لم يؤكد الحضور', g.name, 'الدعوة تشمل '+seats(g.allowed), '', id); break;
+      case 'declined': show('bad','الضيف اعتذر عن الحضور', g.name, '', '', id); break;
+      default: show('bad','باركود غير معروف','', '', 'تأكد أن البطاقة خاصة بهذه المناسبة');
+    }
+  }catch(e){ show('bad','تعذّر الاتصال','', '', 'تحقق من الإنترنت ثم أعد المحاولة'); }
+  finally{ busy = false; }
+}
+function lock(msg){ try{ sessionStorage.removeItem('door_pin'); }catch(e){} pin=''; stopCam(); $('#scanner').hidden=true; $('#gate').hidden=false; $('#pinErr').textContent=msg||''; }
+async function startCam(){
+  if(typeof Html5Qrcode !== 'function'){ return; }
+  try{
+    qr = qr || new Html5Qrcode('reader');
+    await qr.start({facingMode:'environment'}, {fps:10, qrbox:{width:230,height:230}}, txt=>{ if(!busy && $('#res').hidden){ check(txt); } });
+  }catch(e){ $('#reader').textContent = 'لم نتمكن من تشغيل الكاميرا. اسمح بالوصول إلى الكاميرا أو استخدم الإدخال اليدوي.'; $('#reader').style.padding='20px'; }
+}
+function stopCam(){ try{ qr && qr.stop(); }catch(e){} }
+$('#pinBtn').onclick = ()=>{ const v = $('#pin').value.trim(); if(!v){ $('#pinErr').textContent='أدخل رمز المنظّمين'; return; } pin=v; try{ sessionStorage.setItem('door_pin', v); }catch(e){} $('#gate').hidden=true; $('#scanner').hidden=false; startCam(); };
+$('#nextBtn').onclick = ()=>{ $('#res').hidden=true; $('#nextBtn').hidden=true; };
+$('#codeBtn').onclick = ()=>{ const v=$('#code').value; if(v.trim()){ $('#res').hidden=true; check(v); } };
+if(pin){ $('#gate').hidden=true; $('#scanner').hidden=false; startCam(); }
+})();
+</script>
+</body>
+</html>

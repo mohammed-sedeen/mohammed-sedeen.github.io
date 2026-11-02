@@ -166,6 +166,11 @@ textarea.inp{min-height:100px;resize:vertical}
 .qr{width:196px;height:196px;margin:0 auto;padding:8px;background:#fff;border:1px solid #E3D7C8}
 .qr canvas{width:100%;height:100%;image-rendering:pixelated}
 .pass .meta{font-family:var(--f-th);font-size:12.5px;color:#8A7B6E;margin:14px 0 0}
+.pimg{position:fixed;inset:0;z-index:90;background:rgba(30,20,12,.82);display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.pimg-in{max-width:420px;width:100%;text-align:center;color:#FFFDF9;font-family:var(--f-th)}
+.pimg-in p{margin:0 0 12px;font-size:15px}
+.pimg-in img{display:block;width:100%;height:auto;border-radius:8px;-webkit-touch-callout:default;user-select:auto}
+.pimg-in button{margin-top:14px;min-height:44px;padding:0 28px;border:1px solid #FFFDF9;border-radius:30px;background:transparent;color:#FFFDF9;font-family:var(--f-th);font-size:15px}
 .save{display:block;margin:20px auto 0;min-height:46px;padding:0 28px;border:1px solid var(--brown);border-radius:30px;background:#fff;color:var(--brown);font-family:var(--f-th);font-size:15px}
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition-duration:.01s!important;transition-delay:0s!important}}
@@ -284,9 +289,9 @@ textarea.inp{min-height:100px;resize:vertical}
   <div class="form" id="form"></div>
 </div>
 
-<script src="config.js?v=5"></script>
+<script src="config.js?v=6"></script>
 <script src="vendor/qrcode-generator.js"></script>
-<script src="vendor/html2canvas.min.js" defer></script>
+
 <script>
 (function(){
 const CFG = window.INVITE_CONFIG || {}; const PREVIEW = !!window.__PREVIEW__; const DEMO = !CFG.API_URL;
@@ -391,7 +396,7 @@ function renderDone(){
     const pass=el('div',{class:'pass',id:'pass'}, el('p',{class:'pn',text:guest.name}), el('p',{class:'pc2',text:'عدد الحضور: '+seats(guest.count||1)}),
       el('div',{class:'perf'}), el('div',{class:'qr'},cv), el('p',{class:'meta',text:[S.day_ar,S.date_num,'–',S.hall_ar,S.city_ar].join(' ')}));
     f.append(pass); drawQR(cv, guestLink(guest.id));
-    if(!PREVIEW){ const sv=el('button',{type:'button',class:'save',text:'حفظ البطاقة كصورة'}); sv.onclick=()=>savePass(pass); f.append(sv); }
+    if(!PREVIEW){ const sv=el('button',{type:'button',class:'save',text:'حفظ البطاقة كصورة'}); sv.onclick=()=>savePass(); f.append(sv); }
     f.append(el('div',{style:'text-align:center'},edit));
   } else {
     f.append(el('div',{class:'done'}, el('h3',{text:'تم حفظ الرد'}), el('p',{text:'نشكر لطفكم، ونتمنى لقاءكم في أفراح قادمة بإذن الله.'})), el('div',{style:'text-align:center'},edit));
@@ -400,8 +405,35 @@ function renderDone(){
 function drawQR(cv,text){ const q=qrcode(0,'M'); q.addData(text); q.make(); const n=q.getModuleCount(), ctx=cv.getContext('2d'), z=cv.width, m=2, c=z/(n+m*2);
   ctx.fillStyle='#fff'; ctx.fillRect(0,0,z,z); ctx.fillStyle='#2E241C';
   for(let r=0;r<n;r++) for(let k=0;k<n;k++) if(q.isDark(r,k)) ctx.fillRect(Math.floor((k+m)*c),Math.floor((r+m)*c),Math.ceil(c),Math.ceil(c)); }
-async function savePass(node){ try{ if(typeof html2canvas!=='function') throw 0; const c=await html2canvas(node,{scale:3,backgroundColor:'#FBF7F1'}); const b=await new Promise(r=>c.toBlob(r,'image/png'));
-  const file=new File([b],'wedding-pass.png',{type:'image/png'}); if(navigator.canShare&&navigator.canShare({files:[file]})) await navigator.share({files:[file]}); else { const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='wedding-pass.png'; document.body.appendChild(a); a.click(); a.remove(); } }catch(e){} }
+function rr(x,a,b,w,h,r){ x.beginPath(); x.moveTo(a+r,b); x.arcTo(a+w,b,a+w,b+h,r); x.arcTo(a+w,b+h,a,b+h,r); x.arcTo(a,b+h,a,b,r); x.arcTo(a,b,a+w,b,r); x.closePath(); }
+function passCanvas(){ const W=1080,H=1500,c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d');
+  x.fillStyle='#F3ECE2'; x.fillRect(0,0,W,H);
+  x.save(); x.shadowColor='rgba(70,45,25,.18)'; x.shadowBlur=40; x.shadowOffsetY=12; x.fillStyle='#FBF7F1'; rr(x,70,70,W-140,H-140,18); x.fill(); x.restore();
+  x.strokeStyle='#E3D7C8'; x.lineWidth=3; rr(x,70,70,W-140,H-140,18); x.stroke();
+  x.direction='rtl'; x.textAlign='center'; x.textBaseline='middle';
+  x.fillStyle='#8A7B6E'; x.font="500 34px 'Thmanyah Sans',Tahoma,sans-serif"; x.fillText('بطاقة دخول حفل زفاف',W/2,170);
+  x.fillStyle='#5A4232'; x.font="700 64px 'Amiri',serif"; x.fillText('محمد & سدين',W/2,250);
+  x.fillStyle='#B09459'; x.font="700 70px 'Amiri',serif"; let nm=guest.name||''; x.fillText(nm,W/2,400,W-240);
+  x.fillStyle='#7B5E43'; x.font="400 40px 'Thmanyah Sans',Tahoma,sans-serif"; x.fillText('عدد الحضور: '+seats(guest.count||1),W/2,480);
+  x.strokeStyle='#E6DBCD'; x.lineWidth=3; x.setLineDash([14,12]); x.beginPath(); x.moveTo(110,550); x.lineTo(W-110,550); x.stroke(); x.setLineDash([]);
+  x.fillStyle='#F3ECE2'; x.beginPath(); x.arc(70,550,30,0,7); x.arc(W-70,550,30,0,7); x.fill();
+  const q=document.createElement('canvas'); q.width=q.height=620; drawQR(q,guestLink(guest.id)); x.drawImage(q,(W-620)/2,600);
+  x.fillStyle='#8A7B6E'; x.font="400 36px 'Thmanyah Sans',Tahoma,sans-serif"; x.fillText([S.day_ar,S.date_num,'–',S.hall_ar,S.city_ar].join(' '),W/2,1300);
+  x.fillStyle='#A3927F'; x.font="400 30px 'Thmanyah Sans',Tahoma,sans-serif"; x.fillText(S.pass_note||'',W/2,1360,W-240);
+  return c; }
+function showPassImage(url){ const o=document.createElement('div'); o.className='pimg';
+  o.innerHTML='<div class="pimg-in"><p>اضغط مطوّلاً على الصورة ثم اختر «حفظ الصورة»</p><img alt="بطاقة الدخول"><button type="button">إغلاق</button></div>';
+  o.querySelector('img').src=url; o.querySelector('button').onclick=()=>o.remove(); o.addEventListener('click',e=>{ if(e.target===o) o.remove(); }); document.body.appendChild(o); }
+async function savePass(){ let c; try{ await document.fonts.ready; }catch(e){}
+  try{ c=passCanvas(); }catch(e){ alertMsg(); return; }
+  const url=c.toDataURL('image/png'); const fname='بطاقة-دخول-'+(guest.id||'')+'.png';
+  const inApp=/FBAN|FBAV|Instagram|WhatsApp|Line\/|Snapchat|TikTok|wv\)/i.test(navigator.userAgent);
+  try{ const b=await new Promise(r=>c.toBlob(r,'image/png')); const file=new File([b],fname,{type:'image/png'});
+    if(!inApp && navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:'بطاقة الدخول'}); return; }catch(e){ if(e&&e.name==='AbortError') return; } }
+    if(!inApp && !/iPhone|iPad|iPod/i.test(navigator.userAgent)){ const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=fname; document.body.appendChild(a); a.click(); a.remove(); }
+  }catch(e){}
+  showPassImage(url); }
+function alertMsg(){ const n=document.querySelector('#form .note'); if(n){ n.className='note err'; n.textContent='تعذّر إنشاء الصورة، يمكنكم أخذ لقطة شاشة للبطاقة.'; } }
 
 async function boot(){
   document.documentElement.classList.add('locked'); apply(); tick(); setInterval(tick,1000);
